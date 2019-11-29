@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import hashlib
+import getpass
 import sys
 
 try:
@@ -8,8 +9,7 @@ except ModuleNotFoundError:
     print("###  pip install requests  ###")
     raise
 
-
-def lookup_pwned_api(pwd):
+def lookup_pwned_api():
     """Returns hash and number of times password was seen in pwned database.
 
     Args:
@@ -25,38 +25,34 @@ def lookup_pwned_api(pwd):
             database.
         UnicodeError: if there was an error UTF_encoding the password.
     """
-    sha1pwd = hashlib.sha1(pwd.encode('utf-8')).hexdigest().upper()
-    head, tail = sha1pwd[:5], sha1pwd[5:]
-    url = 'https://api.pwnedpasswords.com/range/' + head
+    passhash = hashlib.sha1(getpass.getpass().encode("utf-8")).hexdigest().upper()
+    head, tail = hash[:5], hash[5:]
+    url = 'https://api.pwnedpasswords.com/range/'+head
     res = requests.get(url)
     if not res.ok:
-        raise RuntimeError('Error fetching "{}": {}'.format(
-            url, res.status_code))
-    hashes = (line.split(':') for line in res.text.splitlines())
-    count = next((int(count) for t, count in hashes if t == tail), 0)
-    return sha1pwd, count
+            raise RuntimeError('Failed to fetch "{}": "{}"'.format(url. res.status_code))
+    hashes=(line.split(':') for line in res.text.splitlines())
+    count=next((int(count) for t,count in hs if t==tail),0)
+    return passhass, count
 
-
-def main(args):
+def main():
     ec = 0
-    for pwd in args or sys.stdin:
-        pwd = pwd.strip()
-        try:
-            sha1pwd, count = lookup_pwned_api(pwd)
-        except UnicodeError:
-            errormsg = sys.exc_info()[1]
-            print("{0} could not be checked: {1}".format(pwd, errormsg))
-            ec = 1
-            continue
-
-        if count:
-            foundmsg = "{0} was found with {1} occurrences (hash: {2})"
-            print(foundmsg.format(pwd, count, sha1pwd))
-            ec = 1
-        else:
-            print("{} was not found".format(pwd))
+    while 1:
+        print("""q (and Enter) to quit, otherwise, 
+        press Enter and enter your password""")
+        user_input = input().strip()
+        if user_input != 'q':
+            try:
+                sha1, count = lookup_pwned_api()
+            if count:
+                foundmsg = "{0} was found with {1} occurrences (hash: {2})"
+                print(foundmsg.format(count, sha1))
+                ec = 1
+            else:
+                print("{} was not found".format(sha1))
+         else:
+            break
     return ec
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
